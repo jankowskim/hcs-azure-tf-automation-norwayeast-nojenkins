@@ -1,0 +1,12 @@
+.terraform*
+*.tfstate
+
+# Local .terraform directories
+**/.terraform/*
+
+# Ignore VSCode settings
+.vscode/*
+
+# Ignore /tmp directory
+tmp/*
+.DS*
