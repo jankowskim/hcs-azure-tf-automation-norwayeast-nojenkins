@@ -32,17 +32,24 @@ provider "azurerm" {
     }
   }
 }
+data "azurerm_kubernetes_cluster" "existing_aks" {
+  name                = "aks-hcs001-norwayeast"
+  resource_group_name = "rg-hcs-norwayeast-dev"
+}
+
 provider "helm" {
   kubernetes {
-    host                   = azurerm_kubernetes_cluster.aks.kube_config.0.host
-    client_certificate     = base64decode(azurerm_kubernetes_cluster.aks.kube_config.0.client_certificate)
-    client_key             = base64decode(azurerm_kubernetes_cluster.aks.kube_config.0.client_key)
-    cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.aks.kube_config.0.cluster_ca_certificate)
+    host                   = data.azurerm_kubernetes_cluster.existing_aks.kube_config.0.host
+    client_certificate     = base64decode(data.azurerm_kubernetes_cluster.existing_aks.kube_config.0.client_certificate)
+    client_key             = base64decode(data.azurerm_kubernetes_cluster.existing_aks.kube_config.0.client_key)
+    cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.existing_aks.kube_config.0.cluster_ca_certificate)
   }
 }
+
 provider "kubernetes" {
-  host                   = azurerm_kubernetes_cluster.hcs_k8s.kube_config.0.host
-  client_certificate     = base64decode(azurerm_kubernetes_cluster.hcs_k8s.kube_config.0.client_certificate)
-  client_key             = base64decode(azurerm_kubernetes_cluster.hcs_k8s.kube_config.0.client_key)
-  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.hcs_k8s.kube_config.0.cluster_ca_certificate)
+  host                   = data.azurerm_kubernetes_cluster.existing_aks.kube_config.0.host
+  client_certificate     = base64decode(data.azurerm_kubernetes_cluster.existing_aks.kube_config.0.client_certificate)
+  client_key             = base64decode(data.azurerm_kubernetes_cluster.existing_aks.kube_config.0.client_key)
+  cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.existing_aks.kube_config.0.cluster_ca_certificate)
 }
+
