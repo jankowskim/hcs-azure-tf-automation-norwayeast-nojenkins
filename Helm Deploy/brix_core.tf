@@ -12,7 +12,7 @@ resource "kubernetes_namespace" "test" {
  
 resource "helm_release" "brix-core" {
   name      = "brix-core"
-  chart     = "/avaya/brix-core"
+  chart     = "avaya/brix-core"
   namespace = "test"
   version   = "0.0.15-azure-dev"
 
@@ -25,7 +25,7 @@ set {
 
   set {
     name  = "global.ingress.hosts[0]"
-    value = "ingress_placeholder.ch"
+    value = "ingressplaceholder.ch"
   }
 
 
