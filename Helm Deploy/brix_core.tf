@@ -15,7 +15,7 @@ resource "helm_release" "brix-core" {
   chart     = "kp-helm-charts/avaya/brix-core"
   namespace = "test"
   version   = "0.0.15-azure-dev"
-}
+
 
 #Set config Map vars
 set {
