@@ -1,7 +1,8 @@
 # Install AWS S3 plugin How can we do this in a better way? this requires some scripting
-`helm plugin install https://github.com/hypnoglow/helm-s3.git`
+#`helm plugin install https://github.com/hypnoglow/helm-s3.git`
 
-#PJ - 2021-03-18 - This is a workaround for the helm-s3 plugin not being able to handle the s3:// protocol
+#PJ - 2021-03-18 - This is a workaround for the helm provider plugin not being able to handle the s3:// protocol
+#PJ also we need to script AWS login. This is a workaround for now
 
 resource "kubernetes_namespace" "test" {
   metadata {
@@ -10,13 +11,13 @@ resource "kubernetes_namespace" "test" {
 }
  
 resource "helm_release" "brix-core" {
-  name = "brix-core"
-  repository = "s3://kp-helm-charts/"
-  chart      = "avaya/brix-core"
-  namespace  = "test"
-  version    = "0.0.15-azure-dev"
+  name      = "brix-core"
+  chart     = "kp-helm-charts/avaya/brix-core"
+  namespace = "test"
+  version   = "0.0.15-azure-dev"
+}
 
-
+#Set config Map vars
 set {
     name  = "global.configMapName"
     value = "brix"
@@ -24,7 +25,7 @@ set {
 
   set {
     name  = "global.ingress.hosts[0]"
-    value = "pres.ictjundt.ch"
+    value = "ingress_placeholder.ch"
   }
 
 
@@ -45,7 +46,7 @@ set {
 
 #   set {
 #     name  = "MS_PUBLIC_FQDN"
-#     value = "https://pres.ictjundt.ch"
+#     value = "put "
 #   }
 
 #   set {
