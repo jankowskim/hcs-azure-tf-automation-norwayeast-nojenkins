@@ -12,7 +12,7 @@ resource "kubernetes_namespace" "test" {
  
 resource "helm_release" "brix-core" {
   name      = "brix-core"
-  chart     = "kp-helm-charts/avaya/brix-core"
+  chart     = "/avaya/brix-core"
   namespace = "test"
   version   = "0.0.15-azure-dev"
 
