@@ -18,7 +18,7 @@ resource "azapi_resource" "ssh_public_key" {
 
 # Keyvault Creation
 resource "azurerm_key_vault" "hcs_keyvault" {
-  name                        = "hcs-keyvault-${var.location}"
+  name                        = "hcs-kv-${var.location}"
   location                    = var.location
   resource_group_name         = module.rg_hcs.name
   enabled_for_disk_encryption = true
