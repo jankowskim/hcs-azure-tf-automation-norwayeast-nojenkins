@@ -92,6 +92,7 @@ vnet_hcs = {
       service_endpoints                             = ["Microsoft.KeyVault", "Microsoft.Storage"]
       private_endpoint_network_policies_enabled     = true
       private_link_service_network_policies_enabled = true
+      ingress_internal_loadbalancer_ip              = "172.16.2.8"
       delegation = []
     }
   }

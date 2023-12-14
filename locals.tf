@@ -25,4 +25,7 @@ locals {
   request_routing_rule_name_https     = "${module.vnet-hcs.vnet_name}-rqrt-https"
   frontend_port_name_https            = "${module.vnet-hcs.vnet_name}-feport-https"
   ssl_certificate_name                = "hcs-${var.location}-front-end-cert"
+  ssl_certificate_name_keyvault       = "hcs-${var.location}-back-end-cert"
+
+  internal_load_balancer_ip_address   = cidrhost((join(", ", module.vnet-hcs.subnets["snet-hcs001"].address_prefixes)), 8)
 }

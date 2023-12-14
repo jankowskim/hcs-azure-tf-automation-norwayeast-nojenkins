@@ -206,6 +206,12 @@ variable "k8s_admin_username" {
   default     = "brix"
 }
 
+variable "k8s_doamin_name" {
+  type        = string
+  description = "kubernetes domain name"
+  default     = "hcs001.hcs-prod-1.ec.avayacloud.com"
+}
+
 # log analytics variables
 variable log_analytics_workspace_name {
     default = "HCS-LogAnalyticsWorkspace"
@@ -246,4 +252,39 @@ variable "appgw_frontend_cert_name" {
   type        = string
   description = "Application Gateway Frontend Certificate Name"
   default     = "appgw-frontend-cert"
+}
+
+variable "switcher_version" {
+  type        = string
+  description = "Switcher version"
+  default     = "0.8.1"
+}
+
+variable "k9s_version" {
+  type        = string
+  description = "K9s version"
+  default     = "0.29.0"
+}
+
+variable "aws_access_key_id" {
+  sensitive = true
+}
+
+variable "aws_secret_access_key" {
+  sensitive = true
+}
+
+variable "aws_region" {
+  default = "eu-central-1"
+}
+
+#variable "helm_repos" {
+#  type = list(object({
+#    name = string
+#    url  = string
+#  }))
+#}
+
+variable "git_repos" {
+  type = list(string)
 }

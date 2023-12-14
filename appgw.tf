@@ -7,7 +7,7 @@ resource "azurerm_network_security_group" "ag_subnet_nsg" {
 
 # Associate NSG and Subnet
 resource "azurerm_subnet_network_security_group_association" "ag_subnet_nsg_associate" {
-  depends_on = [ azurerm_network_security_rule.ag_nsg_rule_inbound]
+  depends_on                = [ azurerm_network_security_rule.ag_nsg_rule_inbound]
   subnet_id                 = module.vnet-hcs.subnets["snet-applicationGateway"].subnet_ids
   network_security_group_id = azurerm_network_security_group.ag_subnet_nsg.id
 }
@@ -37,6 +37,58 @@ resource "azurerm_network_security_rule" "ag_nsg_rule_inbound" {
   network_security_group_name = azurerm_network_security_group.ag_subnet_nsg.name
 }
 
+# Azure Application Gateway Firewall Policy
+resource "azurerm_web_application_firewall_policy" "web_ag_waf_policy" {
+  name                  = "hcs-web-ag-waf-policy-${var.location}"
+  location              = var.location
+  resource_group_name   = module.rg_hcs.name
+  tags                  = merge(local.hcs_tags, {})
+
+  managed_rules {
+    managed_rule_set {
+      type    = "OWASP"
+      version = "3.2"
+    }
+  }
+
+  policy_settings {
+    enabled                     = true
+    mode                        = "Prevention"
+    request_body_check          = true
+    file_upload_limit_in_mb     = 100
+    max_request_body_size_in_kb = 768
+  }
+
+  #custom_rules {
+  #  name      = "Rule1"
+  #  priority  = 1
+  #  rule_type = "MatchRule"
+
+  #  match_conditions {
+  #    match_variables {
+  #      variable_name = "RemoteAddr"
+  #    }
+
+  #    operator           = "IPMatch"
+  #    negation_condition = false
+  #    match_values       = ["192.168.1.0/24"]
+  #  }
+
+  #  match_conditions {
+  #    match_variables {
+  #      variable_name = "RequestHeaders"
+  #      selector      = "UserAgent"
+  #    }
+
+  #    operator           = "Contains"
+  #    negation_condition = false
+  #    match_values       = ["Windows"]
+  #  }
+
+  #  action = "Block"
+  #}
+}
+
 # Azure Application Gateway Public IP
 resource "azurerm_public_ip" "web_ag_publicip" {
   name                        = "hcs-web-ag-publicip-${var.location}"
@@ -48,13 +100,15 @@ resource "azurerm_public_ip" "web_ag_publicip" {
   tags                        = merge(local.hcs_tags, {})
 }
 
-# Azure Application Gateway - Standard
+# Azure Application Gateway
 resource "azurerm_application_gateway" "web_ag" {
-  name                        = "hcs-web-ag-${var.location}"
-  location                    = var.location
-  resource_group_name         = module.rg_hcs.name
-  zones                       = var.zones
-  tags                        = merge(local.hcs_tags, {})
+  name                              = "hcs-web-ag-${var.location}"
+  location                          = var.location
+  resource_group_name               = module.rg_hcs.name
+  zones                             = var.zones
+  tags                              = merge(local.hcs_tags, {})
+  firewall_policy_id                = azurerm_web_application_firewall_policy.web_ag_waf_policy.id
+  force_firewall_policy_association = true
   sku {
     name     = var.appgw_sku
     tier     = var.appgw_sku
@@ -64,6 +118,11 @@ resource "azurerm_application_gateway" "web_ag" {
   gateway_ip_configuration {
     name      = "hcs-${var.location}-web-ag-ip-configuration"
     subnet_id = module.vnet-hcs.subnets["snet-applicationGateway"].subnet_ids
+  }
+
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.agw_identity.id]
   }
 
   # Frontend Port  - HTTP Port 80
@@ -93,11 +152,11 @@ resource "azurerm_application_gateway" "web_ag" {
 
   # HTTP Routing Rule - HTTP to HTTPS Redirect
   request_routing_rule {
-    name                       = local.request_routing_rule_name_http
-    rule_type                  = "Basic"
-    http_listener_name         = local.listener_name_http
-    redirect_configuration_name = local.redirect_configuration_name
-    priority                   = 101
+    name                         = local.request_routing_rule_name_http
+    rule_type                    = "Basic"
+    http_listener_name           = local.listener_name_http
+    redirect_configuration_name  = local.redirect_configuration_name
+    priority                     = 101
   }
 
   # HTTPS Routing Rule - Port 443
@@ -112,11 +171,11 @@ resource "azurerm_application_gateway" "web_ag" {
 
   # Redirect Config for HTTP to HTTPS Redirect
   redirect_configuration {
-    name = local.redirect_configuration_name
-    redirect_type = "Permanent"
-    target_listener_name = local.listener_name_https
-    include_path = true
-    include_query_string = true
+    name                       = local.redirect_configuration_name
+    redirect_type              = "Permanent"
+    target_listener_name       = local.listener_name_https
+    include_path               = true
+    include_query_string       = true
   }
 
   # HTTPS Listener - Port 443
@@ -130,33 +189,39 @@ resource "azurerm_application_gateway" "web_ag" {
 
   # App1 Configs
   backend_address_pool {
-    name = local.backend_address_pool_name_app1
+    name         = local.backend_address_pool_name_app1
+    ip_addresses = [local.internal_load_balancer_ip_address]
   }
 
   backend_http_settings {
-    name                  = local.http_setting_name_app1
-    cookie_based_affinity = "Disabled"
-    #path                  = "/app1/"
-    port                  = 80
-    protocol              = "Http"
-    request_timeout       = 60
-    probe_name            = local.probe_name_app1
+    name                           = local.http_setting_name_app1
+    cookie_based_affinity          = "Disabled"
+    #path                           = "/app1/"
+    port                           = 443
+    protocol                       = "Https"
+    request_timeout                = 60
+    probe_name                     = local.probe_name_app1
+    trusted_root_certificate_names = ["hcs-aks-backend-cert"]
   }
 
   probe {
     name                = local.probe_name_app1
-    host                = "127.0.0.1"
+    host                = var.k8s_doamin_name
     interval            = 30
     timeout             = 30
-    unhealthy_threshold = 3
-    protocol            = "Http"
-    port                = 80
-    path                = "/app1/status.html"
-    match { # Optional
-      body              = "App1"
-      status_code       = ["200"]
+    unhealthy_threshold = 8
+    protocol            = "Https"
+    path                = "/healthz"
+    match {
+      status_code       = ["200-399", "404"]
     }
   }
+
+  trusted_root_certificate {
+    name                = "hcs-aks-backend-cert"
+    key_vault_secret_id = azurerm_key_vault_certificate.hcs_aks_backend_cert.secret_id
+    #key_vault_secret_id = azurerm_key_vault_certificate.hcs_aks_backend_cert.versionless_secret_id
+   }
 
   # SSL Certificate Block
   ssl_certificate {
@@ -165,13 +230,8 @@ resource "azurerm_application_gateway" "web_ag" {
     data = filebase64("${path.module}/ssl-self-signed/${var.appgw_frontend_cert_name}-${var.location}.pfx")
   }
 
-  # WAF Config
-  waf_configuration {
-   firewall_mode            = "Prevention"
-   rule_set_type            = "OWASP"
-   rule_set_version         = "3.2"
-   enabled                  = true
-   max_request_body_size_kb = "128"
-   file_upload_limit_mb     = "750"
-  }
+  #ssl_certificate {
+  #  name = local.ssl_certificate_name_keyvault
+  #  key_vault_secret_id = azurerm_key_vault_certificate.hcs_aks_backend_cert.secret_id
+  #}
 }

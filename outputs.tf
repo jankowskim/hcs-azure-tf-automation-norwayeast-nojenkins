@@ -37,6 +37,10 @@ output "kube_config" {
   sensitive = true
 }
 
+output "ingress_internal_loadbalancer_ip" {
+  value     = cidrhost((join(", ", module.vnet-hcs.subnets["snet-hcs001"].address_prefixes)), 8)
+}
+
 output "hcs_mgmtvm_network_interface_id" {
   description = "HCS MGMT VM Network Interface ID"
   value = azurerm_network_interface.hcs_mgmt_nic.id
@@ -63,8 +67,8 @@ output "hcs_mgmtvm_virtual_machine_id" {
   value = azurerm_linux_virtual_machine.hcs_mgmt_vm.id
 }
 
-# Bastion Host Public IP Output
-output "bastion_host_public_ip_address" {
-  description = "Bastion Host Public Address"
-  value = azurerm_public_ip.bastion_service_publicip.ip_address
-}
+## Bastion Host Public IP Output
+#output "bastion_host_public_ip_address" {
+#  description = "Bastion Host Public Address"
+#  value = azurerm_public_ip.bastion_service_publicip.ip_address
+#}

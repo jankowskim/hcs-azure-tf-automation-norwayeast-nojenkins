@@ -56,6 +56,12 @@ resource "azurerm_kubernetes_cluster" "hcs_k8s" {
   }
 }
 
+resource "azurerm_role_assignment" "netcontributor" {
+  role_definition_name = "Network Contributor"
+  scope                = module.vnet-hcs.subnets["snet-hcs001"].subnet_ids
+  principal_id         = azurerm_kubernetes_cluster.hcs_k8s.identity[0].principal_id
+}
+
 resource "azurerm_monitor_diagnostic_setting" "aks_cluster" {
   name                       = "${azurerm_kubernetes_cluster.hcs_k8s.name}-audit"
   target_resource_id         = azurerm_kubernetes_cluster.hcs_k8s.id
